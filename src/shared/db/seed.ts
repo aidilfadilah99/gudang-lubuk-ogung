@@ -110,9 +110,6 @@ async function runSeed(): Promise<void> {
     console.log('ℹ️ Mode local-memory sudah memiliki data seed otomatis di memori.');
     return;
   }
-  if (!process.env.AUTH_SECRET || process.env.AUTH_SECRET.length < 32) {
-    throw new Error('AUTH_SECRET belum diset (min 32 karakter) di Environment Variables.');
-  }
   const adminUsername = process.env.SEED_ADMIN_USERNAME ?? 'admin';
   const adminPassword = process.env.SEED_ADMIN_PASSWORD;
   if (!adminPassword || adminPassword.length < 8) {

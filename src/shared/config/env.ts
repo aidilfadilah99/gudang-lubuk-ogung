@@ -29,7 +29,9 @@ export function getEnv(): AppEnv {
 
   const isBuildOrTest =
     process.env.NODE_ENV === 'test' ||
-    process.env.NEXT_PHASE === 'phase-production-build';
+    process.env.NEXT_PHASE === 'phase-production-build' ||
+    process.env.VERCEL === '1' ||
+    Boolean(process.env.CI);
 
   const raw = {
     DATABASE_URL:
