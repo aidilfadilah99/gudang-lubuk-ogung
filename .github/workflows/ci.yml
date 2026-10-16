@@ -1,0 +1,56 @@
+name: CI & Supply Chain Security
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  verify-and-test:
+    name: Verify Supply Chain, Architecture, Types & Tests
+    runs-on: ubuntu-latest
+    env:
+      DATABASE_URL: "postgresql://user:password@ep-test-pooler.ap-southeast-1.aws.neon.tech/neondb?sslmode=require"
+      AUTH_SECRET: "ci-test-secret-minimum-32-characters-long-safe"
+      DEFAULT_WAREHOUSE_ID: "wh_lubuk_ogung_01"
+      DEFAULT_WAREHOUSE_NAME: "Gudang Utama KDKMP Lubuk Ogung"
+      NODE_ENV: "test"
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js LTS
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: ".nvmrc"
+          cache: "npm"
+
+      - name: Install Deterministic Dependencies (npm ci)
+        run: npm ci
+
+      - name: Verify Registry Signatures
+        run: npm audit signatures
+
+      - name: Security Audit (High/Critical Gate)
+        run: npm run audit
+
+      - name: Check Modular Architecture & Boundaries
+        run: npm run check:arch
+
+      - name: Run ESLint
+        run: npm run lint
+
+      - name: Run TypeScript Strict Typecheck
+        run: npm run typecheck
+
+      - name: Run Unit, Application & Integration Tests
+        run: npm test
+
+      - name: Build Production Bundle
+        run: npm run build
+        env:
+          NODE_ENV: "production"
