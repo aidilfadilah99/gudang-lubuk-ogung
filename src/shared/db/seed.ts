@@ -3,7 +3,6 @@ import path from 'node:path';
 import { APP_CONSTANTS, USER_ROLES } from '../config/constants';
 import { hashPassword } from '../security/password';
 import { DbExecutor, withUnitOfWork } from './client';
-import { isLocalMemoryMode } from './local-store';
 import {
   categories,
   items,
@@ -107,9 +106,12 @@ async function seedInitialItemsAndLedger(tx: DbExecutor, whId: string): Promise<
 
 async function runSeed(): Promise<void> {
   loadDotEnvIfNeeded();
-  if (isLocalMemoryMode()) {
+  if (process.env.DATABASE_URL === 'local-memory') {
     console.log('ℹ️ Mode local-memory sudah memiliki data seed otomatis di memori.');
     return;
+  }
+  if (!process.env.AUTH_SECRET || process.env.AUTH_SECRET.length < 32) {
+    throw new Error('AUTH_SECRET belum diset (min 32 karakter) di Environment Variables.');
   }
   const adminUsername = process.env.SEED_ADMIN_USERNAME ?? 'admin';
   const adminPassword = process.env.SEED_ADMIN_PASSWORD;
