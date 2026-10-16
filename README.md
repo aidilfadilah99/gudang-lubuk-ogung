@@ -1,4 +1,4 @@
-# Sistem Pergudangan Barang KDKMP Lubuk Ogung (Tahap 1 — MVP)
+﻿# Sistem Pergudangan Barang KDKMP Lubuk Ogung (Tahap 1 — MVP)
 
 Aplikasi Web + PWA (*Progressive Web App*) pengelolaan stok gudang berbasis buku besar (*ledger-based inventory*) untuk **Koperasi Desa Merah Putih (KDKMP) Lubuk Ogung**. Dirancang khusus dengan fokus **Keamanan Rantai Pasok (Supply Chain Security)**, **Arsitektur Modular 4-Lapisan Berbasis Fitur**, dan **Kepatuhan Paket Gratis (Neon PostgreSQL Free + Vercel Hobby)**.
 
@@ -31,53 +31,34 @@ Aplikasi Web + PWA (*Progressive Web App*) pengelolaan stok gudang berbasis buku
    postgresql://neondb_owner:password_anda@ep-contoh-123456-pooler.ap-southeast-1.aws.neon.tech/neondb?sslmode=require
    ```
 
-### Langkah 2: Persiapan di Komputer Lokal
-1. Pastikan **Node.js v20+** dan **npm v10+** terpasang.
-2. Clone repositori dan pasang dependensi secara deterministik menggunakan `npm ci`:
+### Langkah 2: Setup Otomatis di Komputer Lokal (Satu Perintah)
+1. Pastikan **Node.js v24 LTS** (sesuai `.nvmrc`) dan **npm v10+** terpasang.
+2. Clone, instal, dan jalankan setup otomatis:
    ```bash
    git clone https://github.com/aidilfadilah99/gudang-lubuk-ogung.git
    cd gudang-lubuk-ogung
    npm ci
-   ```
-3. Salin [`.env.example`](file:///d:/Code/gudang-lubuk-ogung/.env.example) menjadi `.env`:
-   ```bash
-   cp .env.example .env
-   ```
-4. Isi variabel di dalam `.env`:
-   - `DATABASE_URL`: Tempel *pooled connection string* dari Neon.
-   - `AUTH_SECRET`: Buat string acak minimal 32 karakter (jalankan `node -e "console.log(require('node:crypto').randomBytes(32).toString('hex'))"`).
-   - `SEED_ADMIN_USERNAME`: `admin`
-   - `SEED_ADMIN_PASSWORD`: Password sementara Admin pertama (minimal 8 karakter, hanya dipakai sekali saat menjalankan seed).
-
-### Langkah 3: Jalankan Migrasi Skema & Seed Data Awal
-1. Jalankan migrasi tabel dan indeks ke Neon PostgreSQL:
-   ```bash
-   npm run db:migrate
-   ```
-2. Jalankan skrip seed untuk membuat Gudang Utama Lubuk Ogung, satuan dasar (`KG`, `SAK`, `PCS`, `DUS`, `LTR`), kategori awal, dan akun Admin pertama:
-   ```bash
-   npm run db:seed
-   ```
-3. Jalankan server pengembangan lokal untuk menguji:
-   ```bash
+   npm run setup
    npm run dev
    ```
-   Buka `http://localhost:3000`.
+   `npm run setup` otomatis:
+   - membuat file `.env` (jika belum ada) dengan `DATABASE_URL="local-memory"` dan `AUTH_SECRET` acak 64 karakter;
+   - menjalankan `npm run db:setup` (migrasi + seed, aman diulang/idempoten).
+3. Buka `http://localhost:3000`. Dalam mode `local-memory` data demo sudah terisi (`admin` / `AdminGudang123!`, `petugas1` / `PetugasGudang123!`). Data hilang saat server dimatikan.
 
-### Langkah 4: Deploy Gratis ke Vercel Hobby
-1. Pastikan kode sudah di-push ke repositori GitHub `https://github.com/aidilfadilah99/gudang-lubuk-ogung.git`.
-2. Masuk ke [https://vercel.com](https://vercel.com) (paket **Hobby / Gratis**) dan klik **Add New... -> Project**.
-3. Pilih repositori GitHub `gudang-lubuk-ogung`.
-4. Pada bagian **Build and Development Settings**:
-   - **Framework Preset**: `Next.js`
-   - **Install Command**: Ubah menjadi `npm ci` (Wajib agar Vercel menghormati `package-lock.json` secara ketat).
-   - **Node.js Version**: Pastikan `20.x` (sesuai `.nvmrc`).
-5. Pada bagian **Environment Variables**, tambahkan:
+### Langkah 3: Pindah ke Neon PostgreSQL (Opsional di Lokal)
+1. Di `.env`, ganti `DATABASE_URL` dengan *pooled connection string* Neon dan isi `SEED_ADMIN_PASSWORD` (min 8 karakter).
+2. Jalankan `npm run db:setup` — tabel, indeks, dan data awal dibuat otomatis (aman dijalankan berulang kali).
+
+### Langkah 4: Deploy Gratis ke Vercel Hobby (Migrasi & Seed Otomatis)
+1. Masuk ke [https://vercel.com](https://vercel.com) (paket **Hobby / Gratis**) → **Add New... → Project** → pilih repositori `gudang-lubuk-ogung`.
+2. Pengaturan build **sudah otomatis** dari [`vercel.json`](file:///d:/Code/gudang-lubuk-ogung/vercel.json): Install Command `npm ci`, Build Command `npm run db:setup && npm run build`. Atur **Node.js Version** ke `24.x` di Project Settings.
+3. Pada **Environment Variables**, tambahkan:
    - `DATABASE_URL` = *(Pooled connection string Neon Anda)*
-   - `AUTH_SECRET` = *(Secret acak minimal 32 karakter)*
+   - `AUTH_SECRET` = *(Secret acak minimal 32 karakter — `node -e "console.log(require('node:crypto').randomBytes(32).toString('hex'))"`)*
+   - `SEED_ADMIN_PASSWORD` = *(Password sementara Admin, min 8 karakter — boleh dihapus setelah deploy pertama)*
    - `NEXT_PUBLIC_APP_NAME` = `Gudang KDKMP Lubuk Ogung`
-   *(Catatan: `SEED_ADMIN_PASSWORD` tidak perlu dipasang di Vercel setelah seed selesai dijalankan).*
-6. Klik **Deploy**. Dalam ~1 menit aplikasi Anda sudah online dengan HTTPS otomatis.
+4. Klik **Deploy**. Setiap deploy otomatis menjalankan migrasi + seed (idempoten, data lama tidak ditimpa).
 
 ### Langkah 5: Login Pertama Admin & Pengaturan Petugas Gudang
 1. Buka URL aplikasi Vercel Anda dari HP Android atau komputer.

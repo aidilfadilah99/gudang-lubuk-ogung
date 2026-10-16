@@ -4,10 +4,11 @@
   "private": true,
   "description": "Sistem Pergudangan Barang KDKMP Lubuk Ogung - MVP Tahap 1",
   "engines": {
-    "node": ">=20.0.0",
+    "node": ">=24.0.0 <25.0.0",
     "npm": ">=10.0.0"
   },
   "scripts": {
+    "setup": "node scripts/setup.mjs",
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
@@ -20,7 +21,8 @@
     "verify": "npm ci && npm audit signatures",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "tsx src/shared/db/migrate.ts",
-    "db:seed": "tsx src/shared/db/seed.ts"
+    "db:seed": "tsx src/shared/db/seed.ts",
+    "db:setup": "npm run db:migrate && npm run db:seed"
   },
   "dependencies": {
     "@neondatabase/serverless": "1.2.0",

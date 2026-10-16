@@ -1,6 +1,9 @@
+import fs from 'node:fs';
+import path from 'node:path';
 import { APP_CONSTANTS, USER_ROLES } from '../config/constants';
 import { hashPassword } from '../security/password';
 import { DbExecutor, withUnitOfWork } from './client';
+import { isLocalMemoryMode } from './local-store';
 import {
   categories,
   items,
@@ -17,6 +20,21 @@ import {
   SEED_SUPPLIERS,
   SEED_UNITS,
 } from './seed-data';
+
+function loadDotEnvIfNeeded(): void {
+  if (process.env.DATABASE_URL) return;
+  const envPath = path.resolve(process.cwd(), '.env');
+  if (!fs.existsSync(envPath)) return;
+  for (const line of fs.readFileSync(envPath, 'utf8').split(/\r?\n/)) {
+    const trimmed = line.trim();
+    if (!trimmed || trimmed.startsWith('#')) continue;
+    const eqIdx = trimmed.indexOf('=');
+    if (eqIdx === -1) continue;
+    const key = trimmed.slice(0, eqIdx).trim();
+    const val = trimmed.slice(eqIdx + 1).trim().replace(/^["']|["']$/g, '');
+    if (!process.env[key]) process.env[key] = val;
+  }
+}
 
 async function seedUsersAndMasters(
   tx: DbExecutor,
@@ -88,10 +106,16 @@ async function seedInitialItemsAndLedger(tx: DbExecutor, whId: string): Promise<
 }
 
 async function runSeed(): Promise<void> {
+  loadDotEnvIfNeeded();
+  if (isLocalMemoryMode()) {
+    console.log('ℹ️ Mode local-memory sudah memiliki data seed otomatis di memori.');
+    return;
+  }
   const adminUsername = process.env.SEED_ADMIN_USERNAME ?? 'admin';
   const adminPassword = process.env.SEED_ADMIN_PASSWORD;
   if (!adminPassword || adminPassword.length < 8) {
-    throw new Error('SEED_ADMIN_PASSWORD wajib diset di environment (min 8 karakter).');
+    console.warn('⚠️ SEED_ADMIN_PASSWORD belum diset (min 8 karakter) — seed dilewati.');
+    return;
   }
   const whId = APP_CONSTANTS.DEFAULT_WAREHOUSE_ID;
   const adminHash = await hashPassword(adminPassword);
@@ -101,7 +125,7 @@ async function runSeed(): Promise<void> {
     await seedUsersAndMasters(tx, whId, adminUsername, adminHash, staffHash);
     await seedInitialItemsAndLedger(tx, whId);
   });
-  console.log('✅ Seed selesai: 1 Admin, 2 Petugas, Master Data & 10 Barang contoh.');
+  console.log('✅ Seed otomatis selesai: 1 Admin, 2 Petugas, Master Data & 10 Barang KDKMP.');
 }
 
 runSeed().catch((err) => {

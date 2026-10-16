@@ -9,12 +9,15 @@ on:
 permissions:
   contents: read
 
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+
 jobs:
   verify-and-test:
     name: Verify Supply Chain, Architecture, Types & Tests
     runs-on: ubuntu-latest
     env:
-      DATABASE_URL: "postgresql://user:password@ep-test-pooler.ap-southeast-1.aws.neon.tech/neondb?sslmode=require"
+      DATABASE_URL: "local-memory"
       AUTH_SECRET: "ci-test-secret-minimum-32-characters-long-safe"
       DEFAULT_WAREHOUSE_ID: "wh_lubuk_ogung_01"
       DEFAULT_WAREHOUSE_NAME: "Gudang Utama KDKMP Lubuk Ogung"
