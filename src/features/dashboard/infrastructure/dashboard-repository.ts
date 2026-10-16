@@ -1,11 +1,13 @@
 import { and, desc, eq, gte, sql } from 'drizzle-orm';
 import { DbExecutor, getDb } from '@/shared/db/client';
+import { isLocalMemoryMode } from '@/shared/db/local-store';
 import {
   buildLastNDaysBuckets,
   DashboardRepositoryPort,
   DashboardSnapshot,
   RecentActivityItem,
 } from '../domain/dashboard';
+import { createLocalDashboardRepository } from './local-dashboard-repository';
 import { items, stockMovements } from './schema';
 
 async function fetchSkuAndLowStockCounts(
@@ -103,6 +105,7 @@ async function fetch30DaysFlow(
 export function createDashboardRepository(
   executor: DbExecutor = getDb()
 ): DashboardRepositoryPort {
+  if (isLocalMemoryMode()) return createLocalDashboardRepository();
   return {
     async fetchSnapshot(
       warehouseId: string,

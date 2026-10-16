@@ -1,5 +1,6 @@
 import { and, count, desc, eq, gte, inArray, lte } from 'drizzle-orm';
 import { DbExecutor, getDb } from '@/shared/db/client';
+import { isLocalMemoryMode } from '@/shared/db/local-store';
 import { toNumericString } from '@/shared/lib/format';
 import {
   IssueDestinationType,
@@ -7,6 +8,7 @@ import {
   IssueRepositoryPort,
   StockIssueDocument,
 } from '../domain/issue';
+import { createLocalIssueRepository } from './local-issue-repository';
 import { items, stockIssueItems, stockIssues } from './schema';
 
 async function loadLinesForIssueIds(
@@ -147,6 +149,7 @@ async function queryIssuesList(
 export function createIssueRepository(
   executor: DbExecutor = getDb()
 ): IssueRepositoryPort {
+  if (isLocalMemoryMode()) return createLocalIssueRepository();
   return {
     saveIssue: (doc) => insertIssueAndLines(executor, doc),
     findById: (whId, id) => findIssueById(executor, whId, id),

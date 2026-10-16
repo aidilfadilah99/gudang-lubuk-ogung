@@ -1,5 +1,6 @@
 import { eq } from 'drizzle-orm';
 import { DbExecutor, getDb } from '@/shared/db/client';
+import { getLocalStore, isLocalMemoryMode } from '@/shared/db/local-store';
 import {
   BackupRepositoryPort,
   WarehouseFullBackupData,
@@ -14,6 +15,26 @@ import {
   suppliers,
   units,
 } from './schema';
+
+function createLocalBackupRepository(): BackupRepositoryPort {
+  return {
+    async fetchAllWarehouseData(warehouseId: string): Promise<WarehouseFullBackupData> {
+      const s = getLocalStore();
+      return {
+        warehouseId,
+        exportedAtIso: new Date().toISOString(),
+        categories: s.categories.map((x) => ({ ...x })),
+        units: s.units.map((x) => ({ ...x })),
+        suppliers: s.suppliers.map((x) => ({ ...x })),
+        items: s.items.map((x) => ({ ...x })),
+        receipts: s.receipts.map((x) => ({ ...x })),
+        issues: s.issues.map((x) => ({ ...x })),
+        movements: s.movements.map((x) => ({ ...x })),
+        adjustments: s.adjustments,
+      };
+    },
+  };
+}
 
 async function fetchMasterBackupTables(
   executor: DbExecutor,
@@ -62,6 +83,7 @@ async function fetchTransactionBackupTables(
 export function createBackupRepository(
   executor: DbExecutor = getDb()
 ): BackupRepositoryPort {
+  if (isLocalMemoryMode()) return createLocalBackupRepository();
   return {
     async fetchAllWarehouseData(
       warehouseId: string

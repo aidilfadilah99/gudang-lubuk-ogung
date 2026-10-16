@@ -1,11 +1,13 @@
 import { and, count, desc, eq, gte, inArray, lte } from 'drizzle-orm';
 import { DbExecutor, getDb } from '@/shared/db/client';
+import { isLocalMemoryMode } from '@/shared/db/local-store';
 import { toNumericString } from '@/shared/lib/format';
 import {
   ReceiptItemLine,
   ReceiptRepositoryPort,
   StockReceiptDocument,
 } from '../domain/receipt';
+import { createLocalReceiptRepository } from './local-receipt-repository';
 import {
   items,
   stockReceiptItems,
@@ -153,6 +155,7 @@ async function queryReceiptsList(
 export function createReceiptRepository(
   executor: DbExecutor = getDb()
 ): ReceiptRepositoryPort {
+  if (isLocalMemoryMode()) return createLocalReceiptRepository();
   return {
     saveReceipt: (doc) => insertReceiptAndLines(executor, doc),
     findById: (whId, rId) => findReceiptById(executor, whId, rId),

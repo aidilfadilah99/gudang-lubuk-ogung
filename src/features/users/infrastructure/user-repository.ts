@@ -1,8 +1,40 @@
 import { and, asc, eq } from 'drizzle-orm';
 import { UserRole } from '@/shared/config/constants';
 import { DbExecutor, getDb } from '@/shared/db/client';
+import { getLocalStore, isLocalMemoryMode } from '@/shared/db/local-store';
 import { StaffUserSummary, UserRepositoryPort } from '../domain/user';
 import { users } from './schema';
+
+function createLocalUserRepository(): UserRepositoryPort {
+  return {
+    async listByWarehouse(whId) {
+      return getLocalStore()
+        .users.filter((u) => u.warehouseId === whId)
+        .sort((a, b) => a.username.localeCompare(b.username));
+    },
+    async existsByUsername(username) {
+      return getLocalStore().users.some((u) => u.username === username);
+    },
+    async insertUser(p) {
+      getLocalStore().users.push({ ...p, createdAt: new Date() });
+    },
+    async setActiveStatus(whId, userId, isActive) {
+      const u = getLocalStore().users.find(
+        (x) => x.warehouseId === whId && x.id === userId
+      );
+      if (u) u.isActive = isActive;
+    },
+    async resetPasswordHash(whId, userId, passwordHash) {
+      const u = getLocalStore().users.find(
+        (x) => x.warehouseId === whId && x.id === userId
+      );
+      if (u) {
+        u.passwordHash = passwordHash;
+        u.mustChangePassword = true;
+      }
+    },
+  };
+}
 
 async function queryWarehouseUsers(
   executor: DbExecutor,
@@ -28,6 +60,7 @@ async function queryWarehouseUsers(
 export function createUserRepository(
   executor: DbExecutor = getDb()
 ): UserRepositoryPort {
+  if (isLocalMemoryMode()) return createLocalUserRepository();
   return {
     listByWarehouse: (whId) => queryWarehouseUsers(executor, whId),
     async existsByUsername(username: string): Promise<boolean> {

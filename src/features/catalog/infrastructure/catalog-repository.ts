@@ -1,10 +1,12 @@
 import { and, asc, count, eq, ilike, or } from 'drizzle-orm';
 import { DbExecutor, getDb } from '@/shared/db/client';
+import { isLocalMemoryMode } from '@/shared/db/local-store';
 import { toNumericString } from '@/shared/lib/format';
 import {
   CatalogItemRecord,
   CatalogRepositoryPort,
 } from '../domain/catalog';
+import { createLocalCatalogRepository } from './local-catalog-repository';
 import { categories, items, units } from './schema';
 
 function mapItemRow(r: {
@@ -84,6 +86,7 @@ async function modifyCatalogItem(executor: DbExecutor, item: CatalogItemRecord):
 }
 
 export function createCatalogRepository(executor: DbExecutor = getDb()): CatalogRepositoryPort {
+  if (isLocalMemoryMode()) return createLocalCatalogRepository();
   return {
     listCategories: (whId) =>
       executor.select().from(categories).where(eq(categories.warehouseId, whId)).orderBy(asc(categories.name)),

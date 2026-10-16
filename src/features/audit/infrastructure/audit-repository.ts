@@ -1,5 +1,6 @@
 import { and, count, desc, eq } from 'drizzle-orm';
 import { DbExecutor, getDb } from '@/shared/db/client';
+import { getLocalStore, isLocalMemoryMode } from '@/shared/db/local-store';
 import { TransaksiDuplikatError } from '@/shared/lib/errors';
 import {
   AuditAction,
@@ -7,6 +8,27 @@ import {
   AuditRepositoryPort,
 } from '../domain/audit';
 import { auditLogs, idempotencyKeys } from './schema';
+
+function createLocalAuditRepository(): AuditRepositoryPort {
+  return {
+    async save(entry: AuditLogEntry): Promise<void> {
+      getLocalStore().auditLogs.unshift({ ...entry });
+    },
+    async findMany(params) {
+      const filtered = getLocalStore().auditLogs.filter(
+        (l) =>
+          l.warehouseId === params.warehouseId &&
+          (!params.entityType || l.entityType === params.entityType)
+      );
+      return {
+        items: filtered
+          .slice(params.offset, params.offset + params.limit)
+          .map((r) => ({ ...r, action: r.action as AuditAction })),
+        total: filtered.length,
+      };
+    },
+  };
+}
 
 async function queryAuditLogs(
   executor: DbExecutor,
@@ -36,6 +58,7 @@ async function queryAuditLogs(
 export function createAuditRepository(
   executor: DbExecutor = getDb()
 ): AuditRepositoryPort {
+  if (isLocalMemoryMode()) return createLocalAuditRepository();
   return {
     async save(entry: AuditLogEntry): Promise<void> {
       await executor.insert(auditLogs).values({
@@ -59,6 +82,12 @@ export async function claimIdempotencyKey(
   tx: DbExecutor,
   params: { key: string; warehouseId: string; actorId: string; operation: string }
 ): Promise<void> {
+  if (isLocalMemoryMode()) {
+    const keys = getLocalStore().idempotencyKeys;
+    if (keys.has(params.key)) throw new TransaksiDuplikatError();
+    keys.add(params.key);
+    return;
+  }
   const existing = await tx
     .select()
     .from(idempotencyKeys)

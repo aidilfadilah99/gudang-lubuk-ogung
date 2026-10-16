@@ -1,5 +1,6 @@
 import { and, count, desc, eq, ilike, or, sql } from 'drizzle-orm';
 import { DbExecutor, getDb } from '@/shared/db/client';
+import { isLocalMemoryMode } from '@/shared/db/local-store';
 import { DataTidakDitemukanError } from '@/shared/lib/errors';
 import { toNumericString } from '@/shared/lib/format';
 import {
@@ -10,6 +11,7 @@ import {
   StockRepositoryPort,
   StockSummaryItem,
 } from '../domain/ledger';
+import { createLocalStockRepository } from './local-stock-repository';
 import {
   categories,
   items,
@@ -145,6 +147,7 @@ async function fetchItemMovements(
 export function createStockRepository(
   executor: DbExecutor = getDb()
 ): StockRepositoryPort {
+  if (isLocalMemoryMode()) return createLocalStockRepository();
   return {
     lockItemAndGetBalance: (whId, itemId) =>
       lockAndFetchBalance(executor, whId, itemId),

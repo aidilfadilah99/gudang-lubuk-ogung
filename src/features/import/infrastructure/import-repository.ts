@@ -2,6 +2,7 @@ import crypto from 'node:crypto';
 import { eq } from 'drizzle-orm';
 import ExcelJS from 'exceljs';
 import { DbExecutor, getDb } from '@/shared/db/client';
+import { getLocalStore, isLocalMemoryMode } from '@/shared/db/local-store';
 import { toNumericString } from '@/shared/lib/format';
 import {
   ImportRepositoryPort,
@@ -34,6 +35,55 @@ export async function parseExcelBufferToRawRows(
     });
   });
   return rows;
+}
+
+function upsertLocalBatchRows(
+  warehouseId: string,
+  rows: Array<ValidatedImportRow & { categoryId: string; baseUnitId: string }>
+): number {
+  const s = getLocalStore();
+  for (const r of rows) {
+    const existing = s.items.find(
+      (i) => i.warehouseId === warehouseId && i.sku === r.sku
+    );
+    if (existing) {
+      Object.assign(existing, {
+        name: r.name, barcode: r.barcode, categoryId: r.categoryId,
+        baseUnitId: r.baseUnitId, purchasePrice: r.purchasePrice,
+        sellingPrice: r.sellingPrice, minStock: r.minStock,
+      });
+    } else {
+      s.items.push({
+        id: `item_${crypto.randomUUID()}`, warehouseId, sku: r.sku,
+        barcode: r.barcode, name: r.name, categoryId: r.categoryId,
+        baseUnitId: r.baseUnitId, secondaryUnitName: null, conversionFactor: 1,
+        purchasePrice: r.purchasePrice, sellingPrice: r.sellingPrice,
+        minStock: r.minStock, isActive: true,
+      });
+    }
+  }
+  return rows.length;
+}
+
+function createLocalImportRepository(): ImportRepositoryPort {
+  return {
+    async getCategoryAndUnitMaps(warehouseId) {
+      const s = getLocalStore();
+      return {
+        categoryByCode: new Map(
+          s.categories
+            .filter((c) => c.warehouseId === warehouseId)
+            .map((c) => [c.code.toUpperCase(), c.id])
+        ),
+        unitByCode: new Map(
+          s.units
+            .filter((u) => u.warehouseId === warehouseId)
+            .map((u) => [u.code.toUpperCase(), u.id])
+        ),
+      };
+    },
+    upsertImportedItems: async (whId, rows) => upsertLocalBatchRows(whId, rows),
+  };
 }
 
 async function upsertBatchRows(
@@ -79,6 +129,7 @@ async function upsertBatchRows(
 export function createImportRepository(
   executor: DbExecutor = getDb()
 ): ImportRepositoryPort {
+  if (isLocalMemoryMode()) return createLocalImportRepository();
   return {
     async getCategoryAndUnitMaps(warehouseId: string) {
       const [catRows, unitRows] = await Promise.all([

@@ -1,6 +1,8 @@
 import { and, asc, desc, eq, gte, lte, sql } from 'drizzle-orm';
 import { DbExecutor, getDb } from '@/shared/db/client';
+import { isLocalMemoryMode } from '@/shared/db/local-store';
 import { ReportDataPort } from '../domain/report';
+import { createLocalReportRepository } from './local-report-repository';
 import {
   categories,
   items,
@@ -129,6 +131,7 @@ async function queryIssuesPeriod(
 export function createReportRepository(
   executor: DbExecutor = getDb()
 ): ReportDataPort {
+  if (isLocalMemoryMode()) return createLocalReportRepository();
   return {
     fetchStockAsOf: (whId, asOf) => queryStockAsOf(executor, whId, asOf),
     fetchReceiptsByPeriod: (whId, from, to) =>
