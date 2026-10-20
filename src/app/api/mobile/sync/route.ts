@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createStockRepository } from '@/features/stock/infrastructure/stock-repository';
-import { createCatalogRepository } from '@/features/catalog/infrastructure/catalog-repository';
+import { createStockRepository } from '@/features/stock';
+import { createCatalogRepository } from '@/features/catalog';
 
 export const dynamic = 'force-dynamic';
 
@@ -39,11 +39,8 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
         code: u.code,
       })),
     });
-  } catch (error: any) {
-    console.error('Error mobile sync pull:', error);
-    return NextResponse.json(
-      { success: false, message: error?.message || 'Gagal sinkronisasi data.' },
-      { status: 500 }
-    );
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : 'Gagal sinkronisasi data.';
+    return NextResponse.json({ success: false, message }, { status: 500 });
   }
 }
