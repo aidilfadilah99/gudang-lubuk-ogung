@@ -111,7 +111,7 @@ async function runSeed(): Promise<void> {
     return;
   }
   const adminUsername = process.env.SEED_ADMIN_USERNAME ?? 'admin';
-  const adminPassword = process.env.SEED_ADMIN_PASSWORD;
+  const adminPassword = process.env.SEED_ADMIN_PASSWORD ?? 'AdminKDKMP2026!';
   if (!adminPassword || adminPassword.length < 8) {
     console.warn('⚠️ SEED_ADMIN_PASSWORD belum diset (min 8 karakter) — seed dilewati.');
     return;
